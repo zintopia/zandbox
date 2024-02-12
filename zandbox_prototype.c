@@ -9,7 +9,7 @@
 #define FALLMS 1000
 
 #define powder_material 1
-#define unmv_solid_material 3
+#define unmv_solid_material 2
 
 #define sand_color_scheme (SDL_Color){245, 200, 100, 0.8}
 #define rock_color_scheme (SDL_Color){105, 105, 100, 0.8}
