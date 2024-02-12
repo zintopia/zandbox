@@ -1,4 +1,6 @@
 #include <stdio.h>
+#include <time.h>
+#include <stdlib.h>
 #ifdef _WIN32
     #include <windows.h>
 #else
@@ -8,12 +10,18 @@
 
 #define WIDTH 500
 #define HEIGHT 500
-#define FALLMS 6000
+#define FALLMS 100
+
+#define powder_material 1
+#define unmv_solid_material 3
+
+#define sand_color_scheme (SDL_Color){245, 200, 100, 0.8}
+#define rock_color_scheme (SDL_Color){105, 105, 100, 0.8}
 
 SDL_Window *window = NULL;
 SDL_Renderer *renderer = NULL;
 
-int perimeter[100][100] = {0};
+int area[100][100] = {0};
 
 void init_window(){
     SDL_Init(SDL_INIT_VIDEO);    
@@ -31,66 +39,69 @@ void init_window(){
     SDL_RenderPresent(renderer);
 }   
 
-int is_empty(int x, int y){
-   if(perimeter[x][y] == 0)
-      return 1;
-   else
-      return 0; 
+int is_empty(int y, int x){
+      return (area[y][x] == 0 && y >= 0 && y < 100
+                              && x >= 0 && x < 100); 
 }
 
-void draw_particle(int x, int y){
-    SDL_SetRenderDrawColor(renderer, 220, 190, 60, 1);
+void draw_particle(int y, int x, SDL_Color colors){
+    SDL_SetRenderDrawColor(renderer, colors.r, colors.g, colors.b, colors.a);
     SDL_RenderDrawPoint(renderer, x, y);
-    perimeter[x][y] = 1;
 }
 
-void drop_sand(int deltaX, int deltaY){
-    int pemY = deltaY/5, pemX = deltaX/5;
-    int stay_flag = 0;
+int rand_value(){
+    return (rand() % 10);
+}
+
+void uptsand(int y, int x){
+    int val = rand_value();
+    const int down = is_empty(y+1, x);
+    const int d_left = is_empty(y+1, x-1);
+    const int d_right = is_empty(y+1, x+1);
     
-    while(stay_flag == 0){
-        int down = is_empty(pemX, pemY+1);
-        int left = is_empty(pemX-1, pemY+1);
-        int right = is_empty(pemX+1, pemY+1);
+    if(down){
+        area[y][x] = 0;
+        area[y+1][x] = 1;
+    }
+    else if(d_left && val >= 5){
+        area[y][x] = 0;
+        area[y+1][x-1] = 1;
+    }
+    else if(d_right && val <= 5){
+        area[y][x] = 0;
+        area[y+1][x+1] = 1;
+    }
+    usleep(FALLMS);
+}
 
-        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255); // Turns before pixel into black (1/2)
-       
-        if(down && pemY < 99){
-               SDL_RenderDrawPoint(renderer, pemX, pemY); // Turns before pixel into black (2/2).
-               perimeter[pemX][pemY] = 0; // Removes the before pixel reference from the matrix.
-               draw_particle(pemX, pemY+1);
+void update_screen(){
+    for(int y = 100-1; y>=0; y--){
+        for(int x = 100-1; x>=0; x--){
+            switch(area[y][x]){
+                case powder_material:
+                    draw_particle(y, x, sand_color_scheme);
+                    uptsand(y, x);
+                    break;
+                case unmv_solid_material:
+                    draw_particle(y, x, rock_color_scheme);
+                    break;
+            }
         }
-        else if(left && pemX > 0 && pemY < 99){
-            SDL_RenderDrawPoint(renderer, pemX, pemY);
-            perimeter[pemX][pemY] = 0;
-            draw_particle(pemX-1, pemY+1);
-            pemX--;
-        }
-        else if(right && pemX < 99 && pemY < 99){
-            SDL_RenderDrawPoint(renderer, pemX, pemY);
-            perimeter[pemX][pemY] = 0;
-            draw_particle(pemX+1, pemY+1);
-            pemX++;
-        }
-        else stay_flag = 1;
-        
-        pemY++;
-
-        #ifdef _WIN32
-            sleep(FALLMS);
-        #else 
-            usleep(FALLMS);
-        #endif
-        SDL_RenderPresent(renderer);
     }
 }
 
 int main(void){
+    srand(time(NULL));
     init_window();
     SDL_Event event;
-
+    
     int running = 1;
-    while(running == 1){    
+    int id_reference = 1; /* initiates with sand as default. */
+
+    while(running == 1){
+        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+        SDL_RenderClear(renderer);
+       
         while(SDL_PollEvent(&event)){
             switch(event.type){
                 case SDL_QUIT:
@@ -100,10 +111,19 @@ int main(void){
                     printf("deltaX: %d\tdeltaY = %d\n", event.motion.x, event.motion.y);
                     break;*/
                 case SDL_MOUSEBUTTONDOWN:
-                    drop_sand(event.button.x, event.button.y);                   
+                    int y = event.button.y/5;
+                    int x = event.button.x/5;
+                    area[y][x] = id_reference;
+                    break;
+                case SDL_KEYDOWN:
+                    if(event.key.keysym.sym == 'e')
+                        id_reference++;
+                        if(id_reference > 2) id_reference = 1;
                     break;
             }
         }
+        update_screen();
+        SDL_RenderPresent(renderer);
         SDL_Delay(10);           
     }
 
