@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include <time.h>
 #include <stdlib.h>
-#include <unistd.h>
 #include <SDL.h>
 
 #define WIDTH 500
@@ -9,7 +8,7 @@
 #define FALLMS 1000
 
 #define powder_material 1
-#define unmv_solid_material 2
+#define unmv_solid_material 2 
 
 #define sand_color_scheme (SDL_Color){245, 200, 100, 0.8}
 #define rock_color_scheme (SDL_Color){105, 105, 100, 0.8}
@@ -67,10 +66,9 @@ void uptsand(int y, int x){
         area[y][x] = 0;
         area[y+1][x+1] = 1;
     }
-    usleep(FALLMS);
 }
 
-void update_screen(){
+void update_particles(){
     for(int y = 100-1; y>=0; y--){
         for(int x = 100-1; x>=0; x--){
             switch(area[y][x]){
@@ -97,7 +95,7 @@ int main(void){
     while(running == 1){
         SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
         SDL_RenderClear(renderer);
-       
+
         while(SDL_PollEvent(&event)){
             switch(event.type){
                 case SDL_QUIT:
@@ -118,7 +116,7 @@ int main(void){
                     break;
             }
         }
-        update_screen();
+        update_particles();
         SDL_RenderPresent(renderer);
         SDL_Delay(10);           
     }
