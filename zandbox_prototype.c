@@ -1,16 +1,12 @@
 #include <stdio.h>
 #include <time.h>
 #include <stdlib.h>
-#ifdef _WIN32
-    #include <windows.h>
-#else
-    #include <unistd.h>
-#endif
+#include <unistd.h>
 #include <SDL.h>
 
 #define WIDTH 500
 #define HEIGHT 500
-#define FALLMS 100
+#define FALLMS 1000
 
 #define powder_material 1
 #define unmv_solid_material 3
