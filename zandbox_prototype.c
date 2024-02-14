@@ -5,13 +5,14 @@
 
 #define WIDTH 500
 #define HEIGHT 500
-#define FALLMS 1000
 
-#define powder_material 1
-#define unmv_solid_material 2 
+#define sand_material_id 1
+#define rock_material_id 2 
+#define water_material_id 3
 
 #define sand_color_scheme (SDL_Color){245, 200, 100, 0.8}
 #define rock_color_scheme (SDL_Color){105, 105, 100, 0.8}
+#define water_color_scheme (SDL_Color){0, 65, 255, 0.8}
 
 SDL_Window *window = NULL;
 SDL_Renderer *renderer = NULL;
@@ -45,10 +46,31 @@ void draw_particle(int y, int x, SDL_Color colors){
 }
 
 int rand_value(){
-    return (rand() % 10);
+    return (rand() % 20);
 }
 
-void uptsand(int y, int x){
+void is_sand_in_water(int y, int x){
+    if(area[y+1][x] == water_material_id){
+        area[y+1][x] = 0;
+        area[y][x] = 0;
+        area[y+1][x] = sand_material_id;
+        area[y][x] = water_material_id;
+    }
+    else if(area[y+1][x-1] == water_material_id){
+        area[y+1][x-1] = 0;
+        area[y][x] = 0;
+        area[y+1][x-1] = sand_material_id;
+        area[y][x] = water_material_id;
+    }
+    else if(area[y+1][x+1] == water_material_id){
+        area[y+1][x+1] = 0;
+        area[y][x] = 0;
+        area[y+1][x+1] = sand_material_id;
+        area[y][x] = water_material_id;
+    }
+}
+
+void upt_sand(int y, int x){
     int val = rand_value();
     const int down = is_empty(y+1, x);
     const int d_left = is_empty(y+1, x-1);
@@ -56,15 +78,47 @@ void uptsand(int y, int x){
     
     if(down){
         area[y][x] = 0;
-        area[y+1][x] = 1;
+        area[y+1][x] = sand_material_id;
     }
-    else if(d_left && val >= 5){
+    else if(d_left && val >= 10){
         area[y][x] = 0;
-        area[y+1][x-1] = 1;
+        area[y+1][x-1] = sand_material_id;
     }
-    else if(d_right && val <= 5){
+    else if(d_right && val <= 10){
         area[y][x] = 0;
-        area[y+1][x+1] = 1;
+        area[y+1][x+1] = sand_material_id;
+    }
+    else
+        is_sand_in_water(y, x);
+}
+
+void upt_water(int y, int x){
+    int val = rand_value();
+    const int down = is_empty(y+1, x);
+    const int left = is_empty(y, x-1);
+    const int right = is_empty(y, x+1);
+    const int d_left = is_empty(y+1, x-1);
+    const int d_right = is_empty(y+1, x+1);
+    
+    if(down){
+        area[y][x] = 0;
+        area[y+1][x] = water_material_id;
+    }
+    else if(d_left && val <= 10){
+        area[y][x] = 0;
+        area[y+1][x-1] = water_material_id;
+    }
+    else if(d_right && val >= 10){
+        area[y][x] = 0;
+        area[y+1][x+1] = water_material_id;
+    }
+    else if(left && val <= 10){
+        area[y][x] = 0;
+        area[y][x-1] = water_material_id;
+    }
+    else if(right && val >= 10){
+        area[y][x] = 0;
+        area[y][x+1] = water_material_id;
     }
 }
 
@@ -72,11 +126,15 @@ void update_particles(){
     for(int y = 100-1; y>=0; y--){
         for(int x = 100-1; x>=0; x--){
             switch(area[y][x]){
-                case powder_material:
+                case sand_material_id:
                     draw_particle(y, x, sand_color_scheme);
-                    uptsand(y, x);
+                    upt_sand(y, x);
                     break;
-                case unmv_solid_material:
+                case water_material_id:
+                    draw_particle(y, x, water_color_scheme);
+                    upt_water(y, x);
+                    break;;
+                case rock_material_id:
                     draw_particle(y, x, rock_color_scheme);
                     break;
             }
@@ -90,6 +148,9 @@ int main(void){
     SDL_Event event;
     
     int running = 1;
+    int count = 0;
+    int y, x;
+    int is_pressed = 0;
     int id_reference = 1; /* initiates with sand as default. */
 
     while(running == 1){
@@ -101,20 +162,33 @@ int main(void){
                 case SDL_QUIT:
                     running = 0;
                     break;
-                /*case SDL_MOUSEMOTION:
-                    printf("deltaX: %d\tdeltaY = %d\n", event.motion.x, event.motion.y);
-                    break;*/
+                case SDL_MOUSEMOTION:
+                    int refy = event.motion.y/5, refx = event.motion.x/5;
+                    printf("%d\t%d\n", refy, refx);
+                    if(refy < 100 && refy >= 0 && refx < 100 && refx >= 0)  
+                        y = refy, x = refx;
+                    else is_pressed = 0; // mantains in 0.
+                    break;
                 case SDL_MOUSEBUTTONDOWN:
-                    int y = event.button.y/5;
-                    int x = event.button.x/5;
-                    area[y][x] = id_reference;
+                    if(event.button.button == SDL_BUTTON_LEFT)
+                        is_pressed = 1;     
+                    break;
+                case SDL_MOUSEBUTTONUP:
+                    is_pressed = 0;
                     break;
                 case SDL_KEYDOWN:
                     if(event.key.keysym.sym == 'e')
                         id_reference++;
-                        if(id_reference > 2) id_reference = 1;
+                        if(id_reference > 3) id_reference = 1;
                     break;
             }
+            
+        }
+        if(area[y][x] == 0 && is_pressed){
+            printf("placed into area[%d][%d]\n", y, x);
+            if(count != 0 && count%2 == 0)
+                area[y][x] = id_reference;
+            count++;
         }
         update_particles();
         SDL_RenderPresent(renderer);
