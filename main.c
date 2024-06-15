@@ -355,7 +355,6 @@ int main(void){
     srand(time(NULL));
     init_window();
     TTF_Init();
-    //TTF_Font *arial = TTF_Open("font_src/Arial.ttf", 25);
     SDL_Event event;
     
     int running = 1;
